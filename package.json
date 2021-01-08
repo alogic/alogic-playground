@@ -1,0 +1,50 @@
+{
+  "name": "alogic-playground",
+  "version": "1.0.0",
+  "description": "Alogic compiler playground front-end",
+  "main": "index.js",
+  "scripts": {
+    "build:html": "posthtml -c posthtml.json",
+    "watch:html": "onchange -i \"src/views\" -- npm run build:html",
+    "build:bundle": "webpack --mode=production",
+    "watch:bundle": "onchange -i \"src/css\" \"src/js\" \"src/app.js\" -- webpack --mode=development",
+    "serve": "browser-sync start --server \"dist\" --files \"dist\"",
+    "build": "run-s build:* && touch dist/.nojekyll",
+    "watch": "run-p watch:* serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alogic/alogic-playground%22.git"
+  },
+  "author": "Geza Lore",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/alogic/alogic-playground%22/issues"
+  },
+  "homepage": "https://github.com/alogic/alogic-playground%22#readme",
+  "devDependencies": {
+    "@babel/preset-env": "^7.12.11",
+    "babel-loader": "^8.2.2",
+    "browser-sync": "^2.26.13",
+    "css-loader": "^5.0.1",
+    "eslint": "^7.17.0",
+    "eslint-webpack-plugin": "^2.4.1",
+    "htmlnano": "^0.2.8",
+    "monaco-editor-webpack-plugin": "^2.1.0",
+    "npm-run-all": "^4.1.5",
+    "onchange": "^7.1.0",
+    "posthtml": "^0.15.1",
+    "posthtml-cli": "^0.9.1",
+    "posthtml-modules": "^0.6.4",
+    "style-loader": "^2.0.0",
+    "stylelint": "^13.8.0",
+    "stylelint-webpack-plugin": "^2.1.1",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.12.0",
+    "webpack-cli": "^4.3.1"
+  },
+  "dependencies": {
+    "golden-layout": "^1.5.9",
+    "monaco-editor": "^0.21.2"
+  }
+}

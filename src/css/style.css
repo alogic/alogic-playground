@@ -1,0 +1,108 @@
+/* General CSS */
+
+body {
+  width: 100%;
+  font-family: Tahoma, Arial, Helvetica, sans-serif;
+  font-size: 11pt;
+  margin: 0 auto;
+  background-color: white;
+}
+
+a {
+  :wqcolor: gray;
+}
+
+/* Header */
+
+div.header {
+  color: #ffffff;
+  font-size: 12pt;
+  background-color: #cc092f;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+div.header h2 {
+  font-weight: bold;
+  margin: 0px;
+}
+div.header h2 a {
+  color: #ffffff;
+  text-decoration: none;
+}
+/*
+div.header table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+div.header td {
+  padding: 0px;
+}
+div.header p {
+  margin: 0px;
+}
+td.headerLeft {
+  text-align: left;
+}
+td.headerCenter {
+  text-align: center;
+}
+*/
+
+/* Toolbar */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  color: #000000;
+  font-size: 10pt;
+  background-color: #ffffff;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-bottom: 10px;
+}
+
+.toolbar {
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-bottom: 10px;
+}
+
+.toolbar p {
+  display: inline;
+  padding: 0px;
+  margin: 0px;
+}
+
+.toolbar #cliArgs {
+  flex-grow: 1;
+  margin-left: 5px;
+  margin-right: 10px;
+}
+
+.toolbar #compileButton {
+  margin: 0px;
+}
+
+/* Footer */
+
+div.footer {
+  padding-right: 10px;
+  padding-left: 10px;
+  color: gray;
+  font-size: 9pt;
+}
+div.footer table {
+  width: 100%;
+  border-collapse: collapse;
+}
+div.footer td {
+  vertical-align: top;
+  padding: 0px;
+}
+div.footer p {
+  margin: 0px;
+}
+td.footerRight {
+  text-align: right;
+}
