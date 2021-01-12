@@ -1,15 +1,25 @@
 /* General CSS */
 
-body {
+html, body {
   width: 100%;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
   font-family: Tahoma, Arial, Helvetica, sans-serif;
   font-size: 11pt;
   margin: 0 auto;
   background-color: white;
 }
 
+.maincontent {
+  flex: 1;
+}
+
 a {
-  :wqcolor: gray;
+  color: gray;
 }
 
 /* Header */
@@ -86,21 +96,21 @@ td.headerCenter {
 
 /* Footer */
 
-div.footer {
-  padding-right: 10px;
-  padding-left: 10px;
+footer {
+  flex-shrink: 0;
+  padding: 5px;
   color: gray;
   font-size: 9pt;
 }
-div.footer table {
+footer table {
   width: 100%;
   border-collapse: collapse;
 }
-div.footer td {
+footer td {
   vertical-align: top;
   padding: 0px;
 }
-div.footer p {
+footer p {
   margin: 0px;
 }
 td.footerRight {

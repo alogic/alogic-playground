@@ -3,6 +3,10 @@ import GoldenLayout from "golden-layout";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import * as alogicSyntax from "./alogic_syntax.js";
 
+/* global VERSION */
+
+$("#playground-version").html("Playground Version: " + VERSION);
+
 const config = {
   content: [{
     type: "column",
@@ -42,17 +46,12 @@ const config = {
   }]
 };
 
-const root = $("#root");
+const root = $(".maincontent");
 const myLayout = new GoldenLayout(config, root);
 
-function sizeRoot () {
-  const height = $(window).height() - root.position().top - $(".footer").outerHeight();
-  root.height(height);
-  myLayout.updateSize();
-}
-
-$(window).resize(sizeRoot);
-sizeRoot();
+// Resize layout to fit visible space
+root.css({ overflow: "hidden" });
+window.addEventListener("resize", function () { myLayout.updateSize() });
 
 monaco.languages.register({ id: "alogic" });
 
