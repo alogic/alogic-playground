@@ -59,7 +59,18 @@ monaco.languages.setMonarchTokensProvider("alogic", alogicSyntax.monarchDefiniti
 
 myLayout.registerComponent("inputArea", function (container, ) {
   container.editor = monaco.editor.create(container.getElement()[0], {
-    value: "network example {\n  in bool i;\n  out bool o;\n  i -> o;\n}",
+    value: [
+      "fsm example {",
+      "  in  u8 a;",
+      "  in  u8 b;",
+      "  out u8 s;",
+      "",
+      "  void main() {",
+      "   s = a + b;",
+      "   fence;",
+      "  }",
+      "}"
+    ].join("\n"),
     language: "alogic",
     automaticLayout: true,
     wordWrap: true
