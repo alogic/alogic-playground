@@ -9,7 +9,7 @@
     "build:bundle": "webpack --mode=production",
     "watch:bundle": "onchange -i \"src/css\" \"src/js\" \"src/app.js\" -- webpack --mode=development",
     "serve": "browser-sync start --server \"dist\" --files \"dist\"",
-    "build": "run-s build:* && touch dist/.nojekyll",
+    "build": "run-s build:*",
     "watch": "run-p watch:* serve"
   },
   "repository": {

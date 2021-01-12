@@ -1,0 +1,33 @@
+name: "Build & Publish"
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build + Deploy on GitHub Pages
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Cache Node modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-npm-
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install NPM packages
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Deploy to GitHub Pages
+        run: |
+          touch dist/.nojekyll &&
+          git config --global user.name "GitHub Actions" &&
+          git config --global user.email "" &&
+          git add -f dist &&
+          git commit -m "GitHub Pages deploy" &&
+          git subtree split --prefix dist -b gh-pages &&
+          git push -f origin gh-pages
