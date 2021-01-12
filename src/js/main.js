@@ -73,7 +73,8 @@ myLayout.registerComponent("inputArea", function (container, ) {
     ].join("\n"),
     language: "alogic",
     automaticLayout: true,
-    wordWrap: true
+    wordWrap: false,
+    rulers: [80]
   });
 });
 
@@ -82,8 +83,9 @@ myLayout.registerComponent("outputArea", function (container, state) {
     value: state.text,
     language: state.language,
     automaticLayout: true,
-    wordWrap: true,
-    readOnly: true
+    wordWrap: false,
+    readOnly: true,
+    rulers: [80]
   });
 });
 
@@ -91,7 +93,7 @@ myLayout.registerComponent("consoleArea", function (container, ) {
   window.consoleEditor = monaco.editor.create(container.getElement()[0], {
     language: "plaintext",
     automaticLayout: true,
-    wordWrap: true,
+    wordWrap: false,
     readOnly: true,
     renderIndentGuides: false
   });
