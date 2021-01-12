@@ -94,9 +94,20 @@ function isVerilog(name) {
   return name.endsWith(".v") || name.endsWith(".sv");
 }
 
+function busyOverlayOn(text) {
+  $("#busyText").html(text);
+  $("div.busySpanner").addClass("show");
+  $("div.busyOverlay").addClass("show");
+}
+
+function busyOverlayOff() {
+  $("div.busySpanner").removeClass("show");
+  $("div.busyOverlay").removeClass("show");
+}
+
 compileButton.click(function () {
-  // Disable compile button while we are compiling
-  compileButton.prop("disabled", true);
+  // Show overlay busy indicator
+  busyOverlayOn("Compiling Alogic")
 
   // Gather input files
   const inputStack = myLayout.root.getItemsById("inputStack")[0];
@@ -164,13 +175,16 @@ compileButton.click(function () {
         outputStack.setActiveContentItem(outputStack.contentItems[0]);
       }
 
-      // Re-enable compile button
-      $("#compileButton").prop("disabled", false);
+      // Turn off overlay
+      busyOverlayOff();
     },
     error: function (error) {
+      // Log request and response on error
       console.log(request);
       console.log(error);
-      $("#compileButton").prop("disabled", false);
+
+      // Turn off overlay
+      busyOverlayOff();
     }
   })
 })
