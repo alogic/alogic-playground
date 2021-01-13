@@ -5,8 +5,6 @@ import * as alogicSyntax from "./alogic_syntax.js";
 
 /* global VERSION */
 
-$("#playground-version").html("Playground Version: " + VERSION);
-
 const config = {
   content: [{
     type: "column",
@@ -121,6 +119,26 @@ function busyOverlayOff() {
   $("div.busyOverlay").removeClass("show");
 }
 
+function compilerRequest(request, onSuccess, onError = null) {
+  $.ajax({
+    type: "POST",
+    //url: "http://localhost:8080",
+    url: "https://us-central1-ccx-eng-cam.cloudfunctions.net/alogic-playground",
+    data: JSON.stringify(request),
+    datatype: "json",
+    contentType: "application/json; charset=utf-8",
+    success: onSuccess,
+    error: function (error) {
+      // Log request and response on error
+      console.log(request)
+      console.log(error)
+
+      // Turn off overlay
+      onError(error)
+    }
+  })
+}
+
 compileButton.click(function () {
   // Show overlay busy indicator
   busyOverlayOn("Compiling Alogic")
@@ -132,22 +150,14 @@ compileButton.click(function () {
     files[item.config.title] = item.container.editor.getValue()
   );
 
-  // Create compiler request
-  const request = {
-    request: "compile",
-    args : cliArgs.val().trim().split(/[ ]+/),
-    files : files
-  }
-
-  // Send it off
-  $.ajax({
-    type: "POST",
-    //url: "http://localhost:8080",
-    url: "https://us-central1-ccx-eng-cam.cloudfunctions.net/alogic-playground",
-    data: JSON.stringify(request),
-    datatype: "json",
-    contentType: "application/json; charset=utf-8",
-    success: function (data) {
+  // Perform compilation
+  compilerRequest(
+    {
+      request: "compile",
+      args : cliArgs.val().trim().split(/[ ]+/),
+      files : files
+    },
+    function (data) {
       //console.log(request);
       //console.log(data);
 
@@ -216,15 +226,27 @@ compileButton.click(function () {
       // Turn off overlay
       busyOverlayOff();
     },
-    error: function (error) {
-      // Log request and response on error
-      console.log(request);
-      console.log(error);
-
+    function () {
       // Turn off overlay
       busyOverlayOff();
     }
-  })
+  )
 })
+
+// Display Playground version
+$("#playgroundVersion").html(VERSION)
+
+// Fetch and display compiler version
+compilerRequest(
+  {
+    request : "describe"
+  },
+  function (data) {
+    $("#compilerVersion").html(data.compilerVersion)
+  },
+  function () {
+    $("#compilerVersion").html("UNKNOWN")
+  }
+)
 
 myLayout.init();
