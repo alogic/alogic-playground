@@ -73,6 +73,7 @@ myLayout.registerComponent("inputArea", function (container, ) {
     ].join("\n"),
     language: "alogic",
     automaticLayout: true,
+    lineNumbersMinChars: 3,
     wordWrap: false,
     rulers: [80]
   });
@@ -83,6 +84,7 @@ myLayout.registerComponent("outputArea", function (container, state) {
     value: state.text,
     language: state.language,
     automaticLayout: true,
+    lineNumbersMinChars: 3,
     wordWrap: false,
     readOnly: true,
     rulers: [80]
@@ -93,6 +95,7 @@ myLayout.registerComponent("consoleArea", function (container, ) {
   window.consoleEditor = monaco.editor.create(container.getElement()[0], {
     language: "plaintext",
     automaticLayout: true,
+    lineNumbers: false,
     wordWrap: false,
     readOnly: true,
     renderIndentGuides: false
@@ -132,7 +135,7 @@ compileButton.click(function () {
   // Create compiler request
   const request = {
     request: "compile",
-    args : cliArgs.val().split(/[ ]+/),
+    args : cliArgs.val().trim().split(/[ ]+/),
     files : files
   }
 
@@ -147,15 +150,18 @@ compileButton.click(function () {
     success: function (data) {
       //console.log(request);
       //console.log(data);
+
       // Emit messages to the console
       const messages = data.messages.map(_ => _.text).join("\n");
       window.consoleEditor.setValue(messages);
+      window.consoleEditor.revealLine(1);
 
       // Remove all current output tabs
       const outputStack = myLayout.root.getItemsById("outputStack")[0];
       while (outputStack.contentItems.length > 0) {
         outputStack.removeChild(outputStack.contentItems[0]);
       }
+
       // Sort output files by name, Verilog first
       const names = Object.keys(data.files).sort(function (a, b) {
         const aIsVerilog = isVerilog(a);
@@ -168,6 +174,7 @@ compileButton.click(function () {
           return a.localeCompare(b);
         }
       });
+
       // Create new tabs holding the output files
       names.forEach(function (name) {
         const newConfig = {
@@ -183,6 +190,7 @@ compileButton.click(function () {
         }
         outputStack.addChild(newConfig);
       });
+
       // Select the first output tab (if there are any)
       if (names.length > 0) {
         outputStack.setActiveContentItem(outputStack.contentItems[0]);
