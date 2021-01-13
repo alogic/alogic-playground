@@ -152,7 +152,24 @@ compileButton.click(function () {
       //console.log(data);
 
       // Emit messages to the console
-      const messages = data.messages.map(_ => _.text).join("\n");
+      const messages = data.messages.map(function (message) {
+        // Render message the same way as the compiler
+        let prefix = ""
+        if (message.file != "") {
+          prefix = message.file + ":" + message.line + ": "
+        }
+        if (!message.category.startsWith("STD")) {
+          prefix = prefix + message.category + ": "
+        }
+        let buf = ""
+        if (message.lines.length > 0) {
+          buf += prefix + message.lines[0] + "\n"
+          message.lines.slice(1).forEach( line =>
+            buf += prefix + "... " + line + "\n"
+          )
+        }
+        return buf + message.context
+      }).join("\n");
       window.consoleEditor.setValue(messages);
       window.consoleEditor.revealLine(1);
 
