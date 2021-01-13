@@ -64,8 +64,8 @@ myLayout.registerComponent("inputArea", function (container, ) {
       "  out u8 s;",
       "",
       "  void main() {",
-      "   s = a + b;",
-      "   fence;",
+      "    s = a + b;",
+      "    fence;",
       "  }",
       "}"
     ].join("\n"),
@@ -139,16 +139,39 @@ function compilerRequest(request, onSuccess, onError = null) {
   })
 }
 
+function messageSeverity(message) {
+  if (message.category == "WARNING") {
+    return monaco.MarkerSeverity.Warning
+  } else if (message.category == "NOTE") {
+    return monaco.MarkerSeverity.Info
+  } else {
+    return monaco.MarkerSeverity.Error
+  }
+}
+
 compileButton.click(function () {
   // Show overlay busy indicator
   busyOverlayOn("Compiling Alogic")
 
-  // Gather input files
+  // Gather input files and clear markers while we are at it
   const inputStack = myLayout.root.getItemsById("inputStack")[0];
   const files = {};
-  inputStack.contentItems.forEach(item =>
+  inputStack.contentItems.forEach(function (item) {
+    const editor = item.container.editor
+    // Clear markers
+    monaco.editor.setModelMarkers(editor.getModel(), "alogic", []);
+    // Grab contents
     files[item.config.title] = item.container.editor.getValue()
-  );
+  })
+
+  // Remove all current output tabs
+  const outputStack = myLayout.root.getItemsById("outputStack")[0];
+  while (outputStack.contentItems.length > 0) {
+    outputStack.removeChild(outputStack.contentItems[0]);
+  }
+
+  // Clear console
+  window.consoleEditor.setValue("")
 
   // Perform compilation
   compilerRequest(
@@ -183,10 +206,48 @@ compileButton.click(function () {
       window.consoleEditor.setValue(messages);
       window.consoleEditor.revealLine(1);
 
-      // Remove all current output tabs
-      const outputStack = myLayout.root.getItemsById("outputStack")[0];
-      while (outputStack.contentItems.length > 0) {
-        outputStack.removeChild(outputStack.contentItems[0]);
+      // Annotate editor with message markers
+      const contents = {}
+      const models = {}
+      const markers = {}
+      inputStack.contentItems.forEach(function (item) {
+        const file = item.config.title
+        const editor = item.container.editor
+        contents[file] = editor.getValue()
+        models[file] = editor.getModel()
+        markers[file] = []
+      })
+      data.messages.forEach(function (message) {
+        if (message.file != "") {
+          // Turn string offsets into start/end line/col
+          const startLineNumber = message.line
+          const c = contents[message.file]
+          let x  = message.start
+          while (x > 1 && c[x-1] !== "\n") { x -= 1 }
+          const startColumn = message.start - x + 1 // Monaco is 1 based
+          x = message.start
+          let endLineNumber = startLineNumber
+          let endColumn = startColumn
+          while (x < message.end) {
+            endColumn += 1
+            if (c[x] == "\n") {
+              endColumn = 1
+              endLineNumber += 1
+            }
+            x += 1
+          }
+          markers[message.file].push({
+            startLineNumber: startLineNumber,
+            startColumn: startColumn,
+            endLineNumber: endLineNumber,
+            endColumn: endColumn,
+            severity: messageSeverity(message),
+            message: message.lines.join("\n ... ")
+          })
+        }
+      })
+      for (const file in markers) {
+        monaco.editor.setModelMarkers(models[file], "alogic", markers[file])
       }
 
       // Sort output files by name, Verilog first
