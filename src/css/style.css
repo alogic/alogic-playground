@@ -22,6 +22,11 @@ a {
   color: gray;
 }
 
+.flexBypass {
+  display: flex;
+  flex-grow: 1;
+}
+
 /* Header */
 
 div.header {
@@ -29,7 +34,7 @@ div.header {
   font-size: 12pt;
   background-color: #cc092f;
   padding: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
 div.header h2 {
   font-weight: bold;
@@ -39,25 +44,6 @@ div.header h2 a {
   color: #ffffff;
   text-decoration: none;
 }
-/*
-div.header table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-div.header td {
-  padding: 0px;
-}
-div.header p {
-  margin: 0px;
-}
-td.headerLeft {
-  text-align: left;
-}
-td.headerCenter {
-  text-align: center;
-}
-*/
 
 /* Toolbar */
 
@@ -67,31 +53,27 @@ td.headerCenter {
   color: #000000;
   font-size: 10pt;
   background-color: #ffffff;
-  padding-left: 10px;
-  padding-right: 10px;
-  margin-bottom: 10px;
-}
-
-.toolbar {
-  padding-left: 10px;
-  padding-right: 10px;
-  margin-bottom: 10px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin-bottom: 5px;
 }
 
 .toolbar p {
   display: inline;
-  padding: 0px;
+  margin: 0px;
+}
+
+.toolbar input {
+  display: inline;
   margin: 0px;
 }
 
 .toolbar #cliArgs {
   flex-grow: 1;
-  margin-left: 5px;
-  margin-right: 10px;
 }
 
-.toolbar #compileButton {
-  margin: 0px;
+.toolbar span + span {
+  margin-left: 5px;
 }
 
 /* Footer */
@@ -210,4 +192,16 @@ td.footerRight {
   40% {
     box-shadow: 0 2.5em 0 0;
   }
+}
+
+/* Tab name input */
+
+.tabNameInput {
+  position: absolute;
+  visibility: hidden;
+  z-index: 900;
+}
+
+.tabNameInput.show {
+  visibility: visible;
 }

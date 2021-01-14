@@ -18,7 +18,21 @@ const config = {
         content:[{
           type: "component",
           componentName: "inputArea",
-          title: "top.alogic"
+          title: "top.alogic",
+          componentState: {
+            text: [
+              "fsm example {",
+              "  in  u8 a;",
+              "  in  u8 b;",
+              "  out u8 s;",
+              "",
+              "  void main() {",
+              "    s = a + b;",
+              "    fence;",
+              "  }",
+              "}"
+            ].join("\n")
+          }
         }]
       }, {
         type: "stack",
@@ -55,27 +69,79 @@ monaco.languages.register({ id: "alogic" });
 
 monaco.languages.setMonarchTokensProvider("alogic", alogicSyntax.monarchDefinition)
 
-myLayout.registerComponent("inputArea", function (container, ) {
+// Allow renaming editor when double clicking tab
+const tabNameInput = $(".tabNameInput")
+
+function tabDblClick(theTab) {
+  // If the box is open on another tab, commit it
+  if (tabNameInput.theTab !== undefined) {
+    tabNameInputCommit(tabNameInput.theTab)
+  }
+  // Remove tab double click and ocallback
+  theTab.element.off("dblclick")
+  // Add commit callbacks (focus lost or enter key)
+  tabNameInput.on("focusout", function () {
+    tabNameInputCommit(theTab)
+  })
+  tabNameInput.on("keypress", function (event) {
+    if (event.keyCode == 13) {
+      tabNameInputCommit(theTab)
+    }
+  })
+  // Set initial contents of input box and select basename
+  const value = theTab.contentItem.config.title
+  tabNameInput.val(value)
+  tabNameInput[0].setSelectionRange(0, value.indexOf("."))
+  // Place the input box below the tab
+  let pos = theTab.element.offset()
+  pos["top"] += theTab.element.outerHeight()
+  tabNameInput.css(pos)
+  // Add the activating tab to the box
+  tabNameInput.theTab = theTab
+  // Show input box
+  tabNameInput.addClass("show")
+  // Set focus on input box
+  tabNameInput.focus()
+}
+
+function tabNameInputCommit (theTab) {
+  // Remove editor commit callbacks
+  tabNameInput.off("focusout")
+  tabNameInput.off("keypress")
+  // Add tab double click callback
+  theTab.element.on("dblclick", function () {
+    tabDblClick(theTab)
+  })
+  // Hide input box from DOM
+  tabNameInput.removeClass("show")
+  // Set title to editor contents
+  theTab.contentItem.setTitle(tabNameInput.val().trim())
+  // Remove activated tab from box
+  tabNameInput.theTab = undefined
+}
+
+myLayout.registerComponent("inputArea", function (container, state) {
   container.editor = monaco.editor.create(container.getElement()[0], {
-    value: [
-      "fsm example {",
-      "  in  u8 a;",
-      "  in  u8 b;",
-      "  out u8 s;",
-      "",
-      "  void main() {",
-      "    s = a + b;",
-      "    fence;",
-      "  }",
-      "}"
-    ].join("\n"),
+    value: state.text,
     language: "alogic",
     automaticLayout: true,
     lineNumbersMinChars: 3,
     wordWrap: false,
     rulers: [80]
-  });
-});
+  })
+  // Open name input box on double click
+  container.on("tab", function (tab) {
+    tab.element.on("dblclick", function () {
+      tabDblClick(tab)
+    })
+    // If requested, show the name editor box on open by scheduling a
+    // double click event after layout is complete
+    if (state.showNameEditor === true) {
+      window.setTimeout(function () { tab.element.dblclick() }, 0)
+      state.showNameEditor = false
+    }
+  })
+})
 
 myLayout.registerComponent("outputArea", function (container, state) {
   monaco.editor.create(container.getElement()[0], {
@@ -100,7 +166,25 @@ myLayout.registerComponent("consoleArea", function (container, ) {
   });
 });
 
-const compileButton = $("#compileButton");
+$("#newInputTab").click(function () {
+  const inputStack = myLayout.root.getItemsById("inputStack")[0];
+  let n = 0
+  while (inputStack.contentItems.some(item => item.config.title == "input"+n+".alogic")) {
+    n += 1
+  }
+  const name = "input"+n+".alogic"
+  const newConfig = {
+    type: "component",
+    title: name,
+    componentName: "inputArea",
+    componentState: {
+      text: "",
+      showNameEditor: true
+    }
+  }
+  inputStack.addChild(newConfig);
+})
+
 const cliArgs = $("#cliArgs");
 cliArgs.val("-o out top.alogic");
 
@@ -149,7 +233,7 @@ function messageSeverity(message) {
   }
 }
 
-compileButton.click(function () {
+$("#compileButton").click(function () {
   // Show overlay busy indicator
   busyOverlayOn("Compiling Alogic")
 
