@@ -25,6 +25,7 @@ jobs:
       - name: Deploy to GitHub Pages
         run: |
           touch dist/.nojekyll &&
+          echo "alogic.app" > dist/CNAME &&
           git config --global user.name "GitHub Actions" &&
           git config --global user.email "" &&
           git add -f dist &&
