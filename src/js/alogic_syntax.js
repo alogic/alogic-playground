@@ -29,12 +29,14 @@ define({
     // defaultToken: 'invalid',
 
     keywords: [
-      'fsm', 'network', 'pipeline', 'typedef', 'struct', 'in', 'out', 'const',
-      'param', 'fence', 'true', 'false', 'loop', 'while', 'do', 'for', 'if',
-      'goto', 'else', 'break', 'continue', 'return', 'case', 'default', 'new',
-      'let', 'entity', 'static', 'stall', 'comb', 'stack', 'sram', 'reg',
-      'signed', 'unsigned', 'gen', 'type', 'assert', 'sync', 'ready', 'accept',
-      'wire', 'bubble', 'fslice', 'bslice', 'verbatim', 'verilog'
+      'fsm', 'network', 'pipeline', 'typedef', 'struct', 'in', 'out',
+      'const', 'param', 'fence', 'true', 'false', 'void', 'bool', 'uint',
+      'int', 'loop', 'while', 'do', 'for', 'if', 'goto', 'else', 'break',
+      'continue', 'return', 'case', 'default', 'new', 'let', 'entity',
+      'static', 'wait', 'comb', 'stack', 'sram', 'reg', 'signed', 'unsigned',
+      'gen', 'type', 'assert', 'assume', 'import', 'using', 'from', 'this',
+      'as', 'compile', 'sync', 'ready', 'wire', 'bubble', 'fslice', 'bslice',
+      'verbatim'
     ],
 
     typeKeywords: [
