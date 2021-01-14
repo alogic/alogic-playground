@@ -3,6 +3,7 @@ const ESLintPlugin = require("eslint-webpack-plugin");
 const StylelintPlugin = require("stylelint-webpack-plugin");
 const MonacoWebpackPlugin = require("monaco-editor-webpack-plugin");
 const GitRevisionPlugin = require("git-revision-webpack-plugin");
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 const gitRevisionPlugin = new GitRevisionPlugin(versionCommand="describe --always");
 
@@ -16,6 +17,7 @@ module.exports = {
     new ESLintPlugin(),
     new StylelintPlugin(),
     new MonacoWebpackPlugin(languages=["systemverilog", "json"]),
+    new MiniCssExtractPlugin(),
     new webpack.DefinePlugin({
       'VERSION': JSON.stringify(gitRevisionPlugin.version()),
     })
@@ -25,7 +27,7 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-            "style-loader",
+            MiniCssExtractPlugin.loader,
             "css-loader"
         ],
       },
