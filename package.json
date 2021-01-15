@@ -45,8 +45,11 @@
     "webpack-cli": "^4.3.1"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.15.2",
+    "clipboard": "^2.0.6",
     "golden-layout": "^1.5.9",
     "lz-string": "^1.4.4",
-    "monaco-editor": "^0.21.2"
+    "monaco-editor": "^0.21.2",
+    "tippy.js": "^6.2.7"
   }
 }

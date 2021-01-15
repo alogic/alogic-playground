@@ -3,6 +3,8 @@ import GoldenLayout from "golden-layout"
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api"
 import * as alogicSyntax from "./alogic_syntax.js"
 import lzstring from "lz-string"
+import Clipboard from "clipboard"
+import tippy from "tippy.js"
 
 /* global VERSION */
 
@@ -27,11 +29,10 @@ function indexPage() {
     }
   }
 
-  // Grab a handle to the argument input box
+  // Grab hadles to static components
   const cliArgs = $("#cliArgs")
-
-  // Grab a handle to the tab name editor input box
   const tabNameInput = $(".tabNameInput")
+  const shareButton = $("#shareButton")
 
   // File name predicate function
   function isVerilog(name) {
@@ -180,10 +181,6 @@ function indexPage() {
     restoreConfig(config)
   }
 
-  //function setConfigInHash(config) {
-  //  window.location.hash = lzstring.compressToBase64(JSON.stringify(config))
-  //}
-
   // Save current UI state in localStorage
   function storeConfigInLocalStorage(config) {
     window.localStorage.setItem("config", lzstring.compressToUTF16(JSON.stringify(config)))
@@ -232,7 +229,7 @@ function indexPage() {
     tabNameInput.val(value)
     tabNameInput[0].setSelectionRange(0, value.indexOf("."))
     // Place the input box below the tab
-    let pos = theTab.element.offset()
+    const pos = theTab.element.offset()
     pos["top"] += theTab.element.outerHeight()
     tabNameInput.css(pos)
     // Add the activating tab to the box
@@ -497,6 +494,33 @@ function indexPage() {
         busyOverlayOff()
       }
     )
+  })
+
+  // Initialize clipboard.js
+  new Clipboard($("#sharePopover button")[0])
+
+  // Add the popover to the share button
+  const sharePopover = document.getElementById('sharePopover')
+  sharePopover.style.display = 'block';
+  tippy("#shareButton", {
+    content: sharePopover,
+    trigger: "click",
+    placement: "bottom-end",
+    interactive: true,
+    theme: "light-border"
+  })
+
+  // Share button click
+  shareButton.click(function () {
+    const shareLink = $("#sharePopover input")
+    // Clear the value
+    shareLink.val(null)
+    // Compress the config
+    const base64config = lzstring.compressToBase64(JSON.stringify(getConfig()))
+    // Form link
+    const link = window.location.origin + window.location.pathname + "#" + base64config
+    // Set link value
+    shareLink.val(link)
   })
 
   // Display Playground version

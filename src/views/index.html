@@ -15,12 +15,22 @@
     <span><p>Command line arguments:</p></span>
     <span class="flexBypass"><input id="cliArgs" type="text"></span>
     <span><input id="compileButton" type="button" value="Compile"></span>
+    <span><input id="shareButton" type="button" value="Share"></span>
   </div>
 
   <div class="maincontent">
   </div>
 
   <input class="tabNameInput" type="text">
+
+  <div style="display: none;">
+    <div id="sharePopover">
+      <input type="text" placeholder="Loading" readonly>
+      <button type="button" title="Copy to clipboard" data-clipboard-target="#sharePopover input">
+        <span class="fas fa-clipboard"></span>
+      </button>
+    </div>
+  </div>
 
   <module href="/components/footer.html"></module>
 
