@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "golden-layout": "^1.5.9",
+    "lz-string": "^1.4.4",
     "monaco-editor": "^0.21.2"
   }
 }

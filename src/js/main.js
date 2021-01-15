@@ -1,12 +1,76 @@
-import $ from "jquery";
-import GoldenLayout from "golden-layout";
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import * as alogicSyntax from "./alogic_syntax.js";
+import $ from "jquery"
+import GoldenLayout from "golden-layout"
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api"
+import * as alogicSyntax from "./alogic_syntax.js"
+import lzstring from "lz-string"
 
 /* global VERSION */
 
 function indexPage() {
-  const config = {
+
+  // The default example content
+  const defaultConfig = {
+    args: "-o out top.alogic",
+    inputFiles : {
+      "top.alogic": [
+        "fsm example {",
+        "  in  u8 a;",
+        "  in  u8 b;",
+        "  out u8 s;",
+        "",
+        "  void main() {",
+        "    s = a + b;",
+        "    fence;",
+        "  }",
+        "}"
+      ].join("\n")
+    }
+  }
+
+  // Grab a handle to the argument input box
+  const cliArgs = $("#cliArgs")
+
+  // Grab a handle to the tab name editor input box
+  const tabNameInput = $(".tabNameInput")
+
+  // File name predicate function
+  function isVerilog(name) {
+    return name.endsWith(".v") || name.endsWith(".sv")
+  }
+
+  // Make a golden-layout component config for an input file
+  function makeInputTab(name, contents, showNameEditor=false) {
+    return {
+      type: "component",
+      id: "inputArea",
+      componentName: "inputArea",
+      title: name,
+      componentState: {
+        text: contents,
+        showNameEditor: showNameEditor
+      }
+    }
+  }
+
+  // Make a golden-layout component config for an output file
+  function makeOutputTab(name, contents) {
+    const language = isVerilog(name)        ? "systemverilog" :
+                     name.endsWith(".json") ? "json"          :
+                                              "plaintext"
+    return {
+      type: "component",
+      id: "outputArea",
+      componentName: "outputArea",
+      title: name,
+      componentState: {
+        text : contents,
+        language : language
+      }
+    }
+  }
+
+  // Initial golden-layout configuration
+  const initialLayoutConfig = {
     content: [{
       type: "column",
       content: [{
@@ -16,38 +80,16 @@ function indexPage() {
           type: "stack",
           id: "inputStack",
           isClosable: false,
-          content:[{
-            type: "component",
-            componentName: "inputArea",
-            title: "top.alogic",
-            componentState: {
-              text: [
-                "fsm example {",
-                "  in  u8 a;",
-                "  in  u8 b;",
-                "  out u8 s;",
-                "",
-                "  void main() {",
-                "    s = a + b;",
-                "    fence;",
-                "  }",
-                "}"
-              ].join("\n")
-            }
-          }]
+          content: [
+            // No initial input file, will be set by restoreConfigFromBrowserState
+          ]
         }, {
           type: "stack",
           id: "outputStack",
           isClosable: false,
-          content: [{
-            type: "component",
-            componentName: "outputArea",
-            componentState: {
-              text: "",
-              language: "plaintext"
-            },
-            title: "Output"
-          }]
+          content: [
+            makeOutputTab("Output", "") // Placeholder prior to compilation
+          ]
         }],
       }, {
         type: "component",
@@ -57,22 +99,118 @@ function indexPage() {
         height: 2
       }]
     }]
-  };
+  }
 
-  const root = $(".maincontent");
-  const myLayout = new GoldenLayout(config, root);
+  // Create the golden-layout instance
+  const root = $(".maincontent")
+  root.css({ overflow: "hidden" }) // ensures layout can shrink with window, not just expand
+  const goldenLayout = new GoldenLayout(initialLayoutConfig, root)
 
   // Resize layout to fit visible space
-  root.css({ overflow: "hidden" });
-  window.addEventListener("resize", function () { myLayout.updateSize() });
+  window.addEventListener("resize", function () { goldenLayout.updateSize() })
 
-  monaco.languages.register({ id: "alogic" });
+  // Convenience accessors
+  function getInputStack() { return goldenLayout.root.getItemsById("inputStack")[0] }
+  function getInputItems() { return goldenLayout.root.getItemsById("inputArea") }
+  function getOutputStack() { return goldenLayout.root.getItemsById("outputStack")[0] }
+  function getOutputItems() { return goldenLayout.root.getItemsById("outputArea") }
 
+  // Get config object based on UI content
+  function getConfig() {
+    const config = {
+      args : cliArgs.val().trim(),
+      inputFiles: {}
+    }
+    getInputItems().forEach(function (item) {
+      config.inputFiles[item.config.title] = item.container.editor.getValue()
+    })
+    return config
+  }
+
+  // Restore UI content based on config object
+  function restoreConfig(config) {
+    // Restore arguments
+    cliArgs.val(config.args);
+    // Sort input files by name, "top.alogic" first
+    const names = Object.keys(config.inputFiles).sort(function (a, b) {
+      const aIsTop = a == "top.alogic"
+      const bIsTop = b == "top.alogic"
+      if (aIsTop && !bIsTop) {
+        return -1
+      } else if (!aIsTop && bIsTop) {
+        return 1
+      } else {
+        return a.localeCompare(b)
+      }
+    })
+    // Remove all current input files
+    for (;;) {
+      const inputItems = getInputItems()
+      if (inputItems.length == 0) break
+      inputItems[0].remove()
+    }
+    // Get input stack
+    const inputStack = getInputStack()
+    // Restore input files from config
+    names.forEach( name =>
+      inputStack.addChild(makeInputTab(name, config.inputFiles[name]))
+    )
+    // Select the first input tab (if there are any)
+    if (names.length > 0) {
+      inputStack.setActiveContentItem(inputStack.contentItems[0])
+    }
+  }
+
+  // Restore from URL fragment or localStorage
+  function restoreConfigFromBrowserState() {
+    // Figure out what to restore
+    let config = defaultConfig
+    if (window.location.hash == "#@default") {
+      // Restore default content
+    } else if (window.location.hash != "") {
+      config = JSON.parse(lzstring.decompressFromBase64(window.location.hash.slice(1)))
+    } else if (window.localStorage.getItem("config") !== null) {
+      config = JSON.parse(lzstring.decompressFromUTF16(window.localStorage.getItem("config")))
+    }
+
+    // Clear URL fragment identifier to keep it neat
+    window.location.hash = ""
+
+    // Restore it
+    restoreConfig(config)
+  }
+
+  //function setConfigInHash(config) {
+  //  window.location.hash = lzstring.compressToBase64(JSON.stringify(config))
+  //}
+
+  // Save current UI state in localStorage
+  function storeConfigInLocalStorage(config) {
+    window.localStorage.setItem("config", lzstring.compressToUTF16(JSON.stringify(config)))
+  }
+
+  // Restore config when the layout has been initialized
+  goldenLayout.on("initialised", restoreConfigFromBrowserState)
+
+  // Restore config when the URL fragment identifier changes, unless it becomes
+  // empty. Note restoreConfigFromBrowserState itself clears the URL fragment
+  // identifier.
+  window.onhashchange = function () {
+    if (window.location.hash !== "") {
+      restoreConfigFromBrowserState()
+    }
+  }
+
+  // Save state in localStorage when leaving the page
+  window.onbeforeunload = function () {
+    storeConfigInLocalStorage(getConfig())
+  }
+
+  // Teach Monaco about the Alogic language
+  monaco.languages.register({ id: "alogic" })
   monaco.languages.setMonarchTokensProvider("alogic", alogicSyntax.monarchDefinition)
 
-  // Allow renaming editor when double clicking tab
-  const tabNameInput = $(".tabNameInput")
-
+  // Callback to run when a tab was double clicked (renaming tab)
   function tabDblClick(theTab) {
     // If the box is open on another tab, commit it
     if (tabNameInput.theTab !== undefined) {
@@ -105,6 +243,7 @@ function indexPage() {
     tabNameInput.focus()
   }
 
+  // Callback to run when the tab name editor content is committed
   function tabNameInputCommit (theTab) {
     // Remove editor commit callbacks
     tabNameInput.off("focusout")
@@ -121,7 +260,8 @@ function indexPage() {
     tabNameInput.theTab = undefined
   }
 
-  myLayout.registerComponent("inputArea", function (container, state) {
+  // Register with goldenLayout how to create an inputArea
+  goldenLayout.registerComponent("inputArea", function (container, state) {
     container.editor = monaco.editor.create(container.getElement()[0], {
       value: state.text,
       language: "alogic",
@@ -144,7 +284,8 @@ function indexPage() {
     })
   })
 
-  myLayout.registerComponent("outputArea", function (container, state) {
+  // Register with goldenLayout how to create an outputArea
+  goldenLayout.registerComponent("outputArea", function (container, state) {
     monaco.editor.create(container.getElement()[0], {
       value: state.text,
       language: state.language,
@@ -153,10 +294,11 @@ function indexPage() {
       wordWrap: false,
       readOnly: true,
       rulers: [80]
-    });
-  });
+    })
+  })
 
-  myLayout.registerComponent("consoleArea", function (container, ) {
+  // Register with goldenLayout how to create a consoleArea
+  goldenLayout.registerComponent("consoleArea", function (container, ) {
     window.consoleEditor = monaco.editor.create(container.getElement()[0], {
       language: "plaintext",
       automaticLayout: true,
@@ -164,46 +306,34 @@ function indexPage() {
       wordWrap: false,
       readOnly: true,
       renderIndentGuides: false
-    });
-  });
+    })
+  })
 
+  // Add new input file button
   $("#newInputTab").click(function () {
-    const inputStack = myLayout.root.getItemsById("inputStack")[0];
+    const inputItems = getInputItems();
     let n = 0
-    while (inputStack.contentItems.some(item => item.config.title == "input"+n+".alogic")) {
+    while (inputItems.some(item => item.config.title == "input"+n+".alogic")) {
       n += 1
     }
     const name = "input"+n+".alogic"
-    const newConfig = {
-      type: "component",
-      title: name,
-      componentName: "inputArea",
-      componentState: {
-        text: "",
-        showNameEditor: true
-      }
-    }
-    inputStack.addChild(newConfig);
+    getInputStack().addChild(makeInputTab(name, "", true))
   })
 
-  const cliArgs = $("#cliArgs");
-  cliArgs.val("-o out top.alogic");
-
-  function isVerilog(name) {
-    return name.endsWith(".v") || name.endsWith(".sv");
-  }
-
+  // Turn on UI busy overlay
   function busyOverlayOn(text) {
     $("#busyText").html(text);
     $("div.busySpanner").addClass("show");
     $("div.busyOverlay").addClass("show");
   }
 
+  // Turn off UI busy overlay
   function busyOverlayOff() {
     $("div.busySpanner").removeClass("show");
     $("div.busyOverlay").removeClass("show");
   }
 
+  // Send a request to the compiler back-end
   function compilerRequest(request, onSuccess, onError = null) {
     $.ajax({
       type: "POST",
@@ -218,41 +348,38 @@ function indexPage() {
         console.log(request)
         console.log(error)
 
-        // Turn off overlay
+        // Call user callback
         onError(error)
       }
     })
   }
 
-  function messageSeverity(message) {
-    if (message.category == "WARNING") {
-      return monaco.MarkerSeverity.Warning
-    } else if (message.category == "NOTE") {
-      return monaco.MarkerSeverity.Info
-    } else {
-      return monaco.MarkerSeverity.Error
-    }
-  }
-
+  // Compile button click
   $("#compileButton").click(function () {
     // Show overlay busy indicator
     busyOverlayOn("Compiling Alogic")
 
-    // Gather input files and clear markers while we are at it
-    const inputStack = myLayout.root.getItemsById("inputStack")[0];
-    const files = {};
-    inputStack.contentItems.forEach(function (item) {
-      const editor = item.container.editor
-      // Clear markers
-      monaco.editor.setModelMarkers(editor.getModel(), "alogic", []);
-      // Grab contents
-      files[item.config.title] = item.container.editor.getValue()
+    // Build request based on the UI configuration
+    const config = getConfig()
+    const request = {
+      request: "compile",
+      ...config
+    }
+
+    // Clear editor markers
+    getInputItems().forEach(function (item) {
+      monaco.editor.setModelMarkers(
+        item.container.editor.getModel(),
+        "alogic",
+        []
+      )
     })
 
     // Remove all current output tabs
-    const outputStack = myLayout.root.getItemsById("outputStack")[0];
-    while (outputStack.contentItems.length > 0) {
-      outputStack.removeChild(outputStack.contentItems[0]);
+    for (;;) {
+      const outputItems = getOutputItems()
+      if (outputItems.length == 0) break
+      outputItems[0].remove()
     }
 
     // Clear console
@@ -260,15 +387,9 @@ function indexPage() {
 
     // Perform compilation
     compilerRequest(
-      {
-        request: "compile",
-        args : cliArgs.val().trim().split(/[ ]+/),
-        files : files
-      },
+      request,
+      // On request success
       function (data) {
-        //console.log(request);
-        //console.log(data);
-
         // Emit messages to the console
         const messages = data.messages.map(function (message) {
           // Render message the same way as the compiler
@@ -287,15 +408,15 @@ function indexPage() {
             )
           }
           return buf + message.context
-        }).join("\n");
-        window.consoleEditor.setValue(messages);
-        window.consoleEditor.revealLine(1);
+        }).join("\n")
+        window.consoleEditor.setValue(messages)
+        window.consoleEditor.revealLine(1)
 
         // Annotate editor with message markers
         const contents = {}
         const models = {}
         const markers = {}
-        inputStack.contentItems.forEach(function (item) {
+        getInputItems().forEach(function (item) {
           const file = item.config.title
           const editor = item.container.editor
           contents[file] = editor.getValue()
@@ -321,12 +442,18 @@ function indexPage() {
               }
               x += 1
             }
+            let severity = monaco.MarkerSeverity.Error
+            if (message.category == "WARNING") {
+              severity = monaco.MarkerSeverity.Warning
+            } else if (message.category == "NOTE") {
+              severity = monaco.MarkerSeverity.Info
+            }
             markers[message.file].push({
               startLineNumber: startLineNumber,
               startColumn: startColumn,
               endLineNumber: endLineNumber,
               endColumn: endColumn,
-              severity: messageSeverity(message),
+              severity: severity,
               message: message.lines.join("\n ... ")
             })
           }
@@ -336,45 +463,38 @@ function indexPage() {
         }
 
         // Sort output files by name, Verilog first
-        const names = Object.keys(data.files).sort(function (a, b) {
-          const aIsVerilog = isVerilog(a);
-          const bIsVerilog = isVerilog(b);
+        const names = Object.keys(data.outputFiles).sort(function (a, b) {
+          const aIsVerilog = isVerilog(a)
+          const bIsVerilog = isVerilog(b)
           if (aIsVerilog && !bIsVerilog) {
-            return -1;
+            return -1
           } else if (!aIsVerilog && bIsVerilog) {
-            return 1;
+            return 1
           } else {
-            return a.localeCompare(b);
+            return a.localeCompare(b)
           }
         });
+
+        // Get outputStack
+        const outputStack = getOutputStack()
 
         // Create new tabs holding the output files
         names.forEach(function (name) {
-          const newConfig = {
-            type: "component",
-            title: name,
-            componentName: "outputArea",
-            componentState: {
-              text : data.files[name],
-              language : isVerilog(name)        ? "systemverilog" :
-                         name.endsWith(".json") ? "json" :
-                                                  "plaintext"
-            }
-          }
-          outputStack.addChild(newConfig);
-        });
+          outputStack.addChild(makeOutputTab(name, data.outputFiles[name]))
+        })
 
         // Select the first output tab (if there are any)
         if (names.length > 0) {
-          outputStack.setActiveContentItem(outputStack.contentItems[0]);
+          outputStack.setActiveContentItem(outputStack.contentItems[0])
         }
 
         // Turn off overlay
-        busyOverlayOff();
+        busyOverlayOff()
       },
+      // On request error
       function () {
         // Turn off overlay
-        busyOverlayOff();
+        busyOverlayOff()
       }
     )
   })
@@ -395,11 +515,12 @@ function indexPage() {
     }
   )
 
-  myLayout.init();
-  console.log("CALLED")
+  // Show goldenLayout
+  goldenLayout.init()
 }
 
 
+// Run only on the index page
 if ($("#indexPage").length > 0) {
   indexPage()
 }
