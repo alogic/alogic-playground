@@ -31,7 +31,6 @@ function indexPage() {
 
   // Grab hadles to static components
   const cliArgs = $("#cliArgs")
-  const tabNameInput = $(".tabNameInput")
   const shareButton = $("#shareButton")
 
   // File name predicate function
@@ -207,56 +206,6 @@ function indexPage() {
   monaco.languages.register({ id: "alogic" })
   monaco.languages.setMonarchTokensProvider("alogic", alogicSyntax.monarchDefinition)
 
-  // Callback to run when a tab was double clicked (renaming tab)
-  function tabDblClick(theTab) {
-    // If the box is open on another tab, commit it
-    if (tabNameInput.theTab !== undefined) {
-      tabNameInputCommit(tabNameInput.theTab)
-    }
-    // Remove tab double click and ocallback
-    theTab.element.off("dblclick")
-    // Add commit callbacks (focus lost or enter key)
-    tabNameInput.on("focusout", function () {
-      tabNameInputCommit(theTab)
-    })
-    tabNameInput.on("keypress", function (event) {
-      if (event.keyCode == 13) {
-        tabNameInputCommit(theTab)
-      }
-    })
-    // Set initial contents of input box and select basename
-    const value = theTab.contentItem.config.title
-    tabNameInput.val(value)
-    tabNameInput[0].setSelectionRange(0, value.indexOf("."))
-    // Place the input box below the tab
-    const pos = theTab.element.offset()
-    pos["top"] += theTab.element.outerHeight()
-    tabNameInput.css(pos)
-    // Add the activating tab to the box
-    tabNameInput.theTab = theTab
-    // Show input box
-    tabNameInput.addClass("show")
-    // Set focus on input box
-    tabNameInput.focus()
-  }
-
-  // Callback to run when the tab name editor content is committed
-  function tabNameInputCommit (theTab) {
-    // Remove editor commit callbacks
-    tabNameInput.off("focusout")
-    tabNameInput.off("keypress")
-    // Add tab double click callback
-    theTab.element.on("dblclick", function () {
-      tabDblClick(theTab)
-    })
-    // Hide input box from DOM
-    tabNameInput.removeClass("show")
-    // Set title to editor contents
-    theTab.contentItem.setTitle(tabNameInput.val().trim())
-    // Remove activated tab from box
-    tabNameInput.theTab = undefined
-  }
-
   // Register with goldenLayout how to create an inputArea
   goldenLayout.registerComponent("inputArea", function (container, state) {
     container.editor = monaco.editor.create(container.getElement()[0], {
@@ -267,17 +216,53 @@ function indexPage() {
       wordWrap: false,
       rulers: [80]
     })
-    // Open name input box on double click
+
+    // Add name input box when tab is created
     container.on("tab", function (tab) {
-      tab.element.on("dblclick", function () {
-        tabDblClick(tab)
+      const inputBox = $("<input type=\"text\">")
+      const instance = tippy(tab.element[0], {
+        content: inputBox[0],
+        trigger: "manual",
+        placement: "bottom-start",
+        interactive: true,
+        theme: "light-border",
+        duration: 0,
+        onShown() {
+          // Set initial contents of input box
+          const value = tab.contentItem.config.title
+          inputBox.val(value)
+          // Select basename
+          inputBox[0].setSelectionRange(0, value.indexOf("."))
+          // Set focus on input box
+          inputBox.focus()
+        },
+        onHidden() {
+          // Set title to input box contents, unless there is already an
+          // input box with the same title
+          const name = inputBox.val().trim()
+          if (getInputItems().every(item => item.config.title != name)) {
+            tab.contentItem.setTitle(name)
+          }
+        },
+        onCreate(instance) {
+          // Show when created if requested (note: showOnCreate does not work,
+          // probably because we need the deferment via setTimeout)
+          if (state.showNameEditor) {
+            window.setTimeout(function () { instance.show() }, 0)
+          }
+        }
       })
-      // If requested, show the name editor box on open by scheduling a
-      // double click event after layout is complete
-      if (state.showNameEditor === true) {
-        window.setTimeout(function () { tab.element.dblclick() }, 0)
-        state.showNameEditor = false
-      }
+      // Close editor popover on pressing Enter
+      inputBox.keypress(function (event) {
+        if (event.keyCode == 13) {
+          instance.hide()
+        }
+      })
+      // Show editor on double clicking tab (this works better than using
+      // trigger: "dblclick" with the tippy instance)
+      tab.element.dblclick(function () {
+        instance.show()
+      })
     })
   })
 
