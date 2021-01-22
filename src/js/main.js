@@ -303,19 +303,6 @@ function indexPage() {
     getInputStack().addChild(makeInputTab(name, "", true))
   })
 
-  // Turn on UI busy overlay
-  function busyOverlayOn(text) {
-    $("#busyText").html(text);
-    $("div.busySpanner").addClass("show");
-    $("div.busyOverlay").addClass("show");
-  }
-
-  // Turn off UI busy overlay
-  function busyOverlayOff() {
-    $("div.busySpanner").removeClass("show");
-    $("div.busyOverlay").removeClass("show");
-  }
-
   // Send a request to the compiler back-end
   function compilerRequest(request, onSuccess, onError = null) {
     $.ajax({
@@ -339,8 +326,32 @@ function indexPage() {
 
   // Compile button click
   $("#compileButton").click(function () {
-    // Show overlay busy indicator
-    busyOverlayOn("Compiling Alogic")
+    // 100 seconds, which is longer than the 60 second timeout in the back-end
+    const busyTimeout = 100000
+    let timerInterval
+
+    function elapsedSeconds() {
+      return ((busyTimeout - Swal.getTimerLeft()) / 1000 + 0.5).toFixed(0)
+    }
+
+    // Start the spinner
+    Swal.fire({
+      html: "Compiling - <span></span> seconds",
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      allowEnterKey: false,
+      timer: busyTimeout,
+      willOpen: () => {
+        Swal.showLoading()
+        timerInterval = window.setInterval(() => {
+          Swal.getContent().querySelector('span').textContent = elapsedSeconds()
+        }, 100)
+      },
+      willClose: () => {
+        window.clearInterval(timerInterval)
+      }
+    })
 
     // Build request based on the UI configuration
     const config = getConfig()
@@ -374,12 +385,13 @@ function indexPage() {
       // On request success
       function (data) {
         if (data.code == "timeout") {
+          Swal.close()
           Swal.fire({
             icon: "error",
             titleText: "Compilation timeout",
-            text: "Each invocatoin of the compiler backend has a 60 second time " +
-                  "limit. If you think your input design should not take this " +
-                  "long, then please file a bug report.",
+            text: "Each invocatoin of the compiler backend has a 60 second " +
+                  "timeout. If you think your input should not take this " +
+                  "long to compile, then please file a bug report.",
             backdrop: "rgba(0,0,0,0.5)",
             showClass: {
               icon: "swal2-noanimation"
@@ -497,15 +509,15 @@ function indexPage() {
           if (names.length > 0) {
             outputStack.setActiveContentItem(outputStack.contentItems[0])
           }
-        }
 
-        // Turn off overlay
-        busyOverlayOff()
+          // Turn off modal
+          Swal.close()
+        }
       },
       // On request error
       function () {
-        // Turn off overlay
-        busyOverlayOff()
+        // Turn off modal
+        Swal.close()
       }
     )
   })
