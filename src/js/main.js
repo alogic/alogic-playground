@@ -444,11 +444,25 @@ function indexPage() {
           monaco.editor.setModelMarkers(models[file], "alogic", markers[file])
         }
 
-        // Sort output files by name, Verilog first
+        // Find the top level ouput files based on the manifest
+        let topOutputFiles = []
+        if (data.code == "ok") {
+          const manifestName = Object.keys(data.outputFiles).find(name => name.endsWith("manifest.json"))
+          const manifest = JSON.parse(data.outputFiles[manifestName])
+          topOutputFiles = Object.values(manifest["top-levels"]).map(item => item["output-file"])
+        }
+
+        // Sort output files by name, Top levels first, then Verilog, then rest
         const names = Object.keys(data.outputFiles).sort(function (a, b) {
+          const aIsTop = topOutputFiles.indexOf(a) >= 0
+          const bIsTop = topOutputFiles.indexOf(b) >= 0
           const aIsVerilog = isVerilog(a)
           const bIsVerilog = isVerilog(b)
-          if (aIsVerilog && !bIsVerilog) {
+          if (aIsTop && !bIsTop) {
+            return -1
+          } else if (!aIsTop && bIsTop) {
+            return 1
+          } else if (aIsVerilog && !bIsVerilog) {
             return -1
           } else if (!aIsVerilog && bIsVerilog) {
             return 1
