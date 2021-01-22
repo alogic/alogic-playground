@@ -4,7 +4,8 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api"
 import * as alogicSyntax from "./alogic_syntax.js"
 import lzstring from "lz-string"
 import Clipboard from "clipboard"
-import tippy from "tippy.js"
+import Tippy from "tippy.js"
+import Swal from 'sweetalert2'
 
 /* global VERSION */
 
@@ -220,7 +221,7 @@ function indexPage() {
     // Add name input box when tab is created
     container.on("tab", function (tab) {
       const inputBox = $("<input type=\"text\">")
-      const instance = tippy(tab.element[0], {
+      const instance = Tippy(tab.element[0], {
         content: inputBox[0],
         trigger: "manual",
         placement: "bottom-start",
@@ -259,7 +260,7 @@ function indexPage() {
         }
       })
       // Show editor on double clicking tab (this works better than using
-      // trigger: "dblclick" with the tippy instance)
+      // trigger: "dblclick" with the Tippy instance)
       tab.element.dblclick(function () {
         instance.show()
       })
@@ -372,116 +373,130 @@ function indexPage() {
       request,
       // On request success
       function (data) {
-        // Emit messages to the console
-        const messages = data.messages.map(function (message) {
-          // Render message the same way as the compiler
-          let prefix = ""
-          if (message.file != "") {
-            prefix = message.file + ":" + message.line + ": "
-          }
-          if (!message.category.startsWith("STD")) {
-            prefix = prefix + message.category + ": "
-          }
-          let buf = ""
-          if (message.lines.length > 0) {
-            buf += prefix + message.lines[0] + "\n"
-            message.lines.slice(1).forEach( line =>
-              buf += prefix + "... " + line + "\n"
-            )
-          }
-          return buf + message.context
-        }).join("\n")
-        window.consoleEditor.setValue(messages)
-        window.consoleEditor.revealLine(1)
+        if (data.code == "timeout") {
+          Swal.fire({
+            icon: "error",
+            titleText: "Compilation timeout",
+            text: "Each invocatoin of the compiler backend has a 60 second time " +
+                  "limit. If you think your input design should not take this " +
+                  "long, then please file a bug report.",
+            backdrop: "rgba(0,0,0,0.5)",
+            showClass: {
+              icon: "swal2-noanimation"
+            }
+          })
+        } else {
+          // Emit messages to the console
+          const messages = data.messages.map(function (message) {
+            // Render message the same way as the compiler
+            let prefix = ""
+            if (message.file != "") {
+              prefix = message.file + ":" + message.line + ": "
+            }
+            if (!message.category.startsWith("STD")) {
+              prefix = prefix + message.category + ": "
+            }
+            let buf = ""
+            if (message.lines.length > 0) {
+              buf += prefix + message.lines[0] + "\n"
+              message.lines.slice(1).forEach( line =>
+                buf += prefix + "... " + line + "\n"
+              )
+            }
+            return buf + message.context
+          }).join("\n")
+          window.consoleEditor.setValue(messages)
+          window.consoleEditor.revealLine(1)
 
-        // Annotate editor with message markers
-        const contents = {}
-        const models = {}
-        const markers = {}
-        getInputItems().forEach(function (item) {
-          const file = item.config.title
-          const editor = item.container.editor
-          contents[file] = editor.getValue()
-          models[file] = editor.getModel()
-          markers[file] = []
-        })
-        data.messages.forEach(function (message) {
-          if (message.file != "") {
-            // Turn string offsets into start/end line/col
-            const startLineNumber = message.line
-            const c = contents[message.file]
-            let x  = message.start
-            while (x > 1 && c[x-1] !== "\n") { x -= 1 }
-            const startColumn = message.start - x + 1 // Monaco is 1 based
-            x = message.start
-            let endLineNumber = startLineNumber
-            let endColumn = startColumn
-            while (x < message.end) {
-              endColumn += 1
-              if (c[x] == "\n") {
-                endColumn = 1
-                endLineNumber += 1
+          // Annotate editor with message markers
+          const contents = {}
+          const models = {}
+          const markers = {}
+          getInputItems().forEach(function (item) {
+            const file = item.config.title
+            const editor = item.container.editor
+            contents[file] = editor.getValue()
+            models[file] = editor.getModel()
+            markers[file] = []
+          })
+          data.messages.forEach(function (message) {
+            if (message.file != "") {
+              // Turn string offsets into start/end line/col
+              const startLineNumber = message.line
+              const c = contents[message.file]
+              let x  = message.start
+              while (x > 1 && c[x-1] !== "\n") { x -= 1 }
+              const startColumn = message.start - x + 1 // Monaco is 1 based
+              x = message.start
+              let endLineNumber = startLineNumber
+              let endColumn = startColumn
+              while (x < message.end) {
+                endColumn += 1
+                if (c[x] == "\n") {
+                  endColumn = 1
+                  endLineNumber += 1
+                }
+                x += 1
               }
-              x += 1
+              let severity = monaco.MarkerSeverity.Error
+              if (message.category == "WARNING") {
+                severity = monaco.MarkerSeverity.Warning
+              } else if (message.category == "NOTE") {
+                severity = monaco.MarkerSeverity.Info
+              }
+              markers[message.file].push({
+                startLineNumber: startLineNumber,
+                startColumn: startColumn,
+                endLineNumber: endLineNumber,
+                endColumn: endColumn,
+                severity: severity,
+                message: message.lines.join("\n ... ")
+              })
             }
-            let severity = monaco.MarkerSeverity.Error
-            if (message.category == "WARNING") {
-              severity = monaco.MarkerSeverity.Warning
-            } else if (message.category == "NOTE") {
-              severity = monaco.MarkerSeverity.Info
-            }
-            markers[message.file].push({
-              startLineNumber: startLineNumber,
-              startColumn: startColumn,
-              endLineNumber: endLineNumber,
-              endColumn: endColumn,
-              severity: severity,
-              message: message.lines.join("\n ... ")
-            })
+          })
+          for (const file in markers) {
+            monaco.editor.setModelMarkers(models[file], "alogic", markers[file])
           }
-        })
-        for (const file in markers) {
-          monaco.editor.setModelMarkers(models[file], "alogic", markers[file])
-        }
 
-        // Find the top level ouput files based on the manifest
-        let topOutputFiles = []
-        if (data.code == "ok") {
+          // Find the top level output files based on the manifest
+          let topOutputFiles = []
           const manifestName = Object.keys(data.outputFiles).find(name => name.endsWith("manifest.json"))
-          const manifest = JSON.parse(data.outputFiles[manifestName])
-          topOutputFiles = Object.values(manifest["top-levels"]).map(item => item["output-file"])
-        }
-
-        // Sort output files by name, Top levels first, then Verilog, then rest
-        const names = Object.keys(data.outputFiles).sort(function (a, b) {
-          const aIsTop = topOutputFiles.indexOf(a) >= 0
-          const bIsTop = topOutputFiles.indexOf(b) >= 0
-          const aIsVerilog = isVerilog(a)
-          const bIsVerilog = isVerilog(b)
-          if (aIsTop && !bIsTop) {
-            return -1
-          } else if (!aIsTop && bIsTop) {
-            return 1
-          } else if (aIsVerilog && !bIsVerilog) {
-            return -1
-          } else if (!aIsVerilog && bIsVerilog) {
-            return 1
-          } else {
-            return a.localeCompare(b)
+          if (manifestName !== undefined) {
+            const manifest = JSON.parse(data.outputFiles[manifestName])
+            topOutputFiles = Object.values(manifest["top-levels"]).map(item => item["output-file"])
           }
-        });
 
-        // Get outputStack
-        const outputStack = getOutputStack()
+          // Sort output files by name, Top levels first, then Verilog, then rest
+          const names = Object.keys(data.outputFiles).sort(function (a, b) {
+            const aIsTop = topOutputFiles.indexOf(a) >= 0
+            const bIsTop = topOutputFiles.indexOf(b) >= 0
+            const aIsVerilog = isVerilog(a)
+            const bIsVerilog = isVerilog(b)
+            if (aIsTop && !bIsTop) {
+              return -1
+            } else if (!aIsTop && bIsTop) {
+              return 1
+            } else if (aIsVerilog && !bIsVerilog) {
+              return -1
+            } else if (!aIsVerilog && bIsVerilog) {
+              return 1
+            } else {
+              return a.localeCompare(b)
+            }
+          });
 
-        // Create new tabs holding the output files
-        names.forEach(function (name) {
-          outputStack.addChild(makeOutputTab(name, data.outputFiles[name]))
-        })
+          // Get outputStack
+          const outputStack = getOutputStack()
 
-        // Select the first output tab (if there are any)
-        if (names.length > 0) {
-          outputStack.setActiveContentItem(outputStack.contentItems[0])
+          // Create new tabs holding the output files
+          names.forEach(function (name) {
+            outputStack.addChild(makeOutputTab(name, data.outputFiles[name]))
+          })
+
+          // Select the first output tab (if there are any)
+          if (names.length > 0) {
+            outputStack.setActiveContentItem(outputStack.contentItems[0])
+          }
         }
 
         // Turn off overlay
@@ -501,7 +516,7 @@ function indexPage() {
   // Add the popover to the share button
   const sharePopover = document.getElementById('sharePopover')
   sharePopover.style.display = 'block';
-  tippy("#shareButton", {
+  Tippy("#shareButton", {
     content: sharePopover,
     trigger: "click",
     placement: "bottom-end",
@@ -547,4 +562,3 @@ function indexPage() {
 if ($("#indexPage").length > 0) {
   indexPage()
 }
-
