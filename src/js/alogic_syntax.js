@@ -34,9 +34,9 @@ define({
       'int', 'loop', 'while', 'do', 'for', 'if', 'goto', 'else', 'break',
       'continue', 'return', 'case', 'default', 'new', 'let', 'entity',
       'static', 'wait', 'comb', 'stack', 'sram', 'reg', 'signed', 'unsigned',
-      'gen', 'type', 'assert', 'assume', 'import', 'using', 'from', 'this',
-      'as', 'compile', 'sync', 'ready', 'wire', 'bubble', 'fslice', 'bslice',
-      'verbatim'
+      'gen', 'type', 'assert', 'assume', 'unreachable', 'import', 'using',
+      'from', 'this', 'as', 'compile', 'sync', 'ready', 'wire', 'bubble',
+      'fslice', 'bslice', 'verbatim'
     ],
 
     typeKeywords: [
