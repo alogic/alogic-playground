@@ -516,8 +516,17 @@ function indexPage() {
       },
       // On request error
       function () {
-        // Turn off modal
         Swal.close()
+        Swal.fire({
+          icon: "error",
+          titleText: "Something seems to have gone wrong ...",
+          text: "The compiler server responded with an unexpected error. " +
+                "Please file a bug report.",
+          backdrop: "rgba(0,0,0,0.5)",
+          showClass: {
+            icon: "swal2-noanimation"
+          }
+        })
       }
     )
   })
