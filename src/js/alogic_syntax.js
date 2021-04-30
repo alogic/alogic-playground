@@ -32,7 +32,7 @@ define({
       'fsm', 'network', 'pipeline', 'typedef', 'struct', 'in', 'out',
       'const', 'param', 'fence', 'true', 'false', 'void', 'bool', 'uint',
       'int', 'loop', 'while', 'do', 'for', 'if', 'goto', 'else', 'break',
-      'continue', 'return', 'case', 'default', 'new', 'let', 'entity',
+      'continue', 'return', 'case', 'default', 'new', 'bind', 'let', 'entity',
       'static', 'wait', 'comb', 'stack', 'sram', 'reg', 'signed', 'unsigned',
       'gen', 'type', 'assert', 'assume', 'unreachable', 'import', 'using',
       'from', 'this', 'as', 'compile', 'sync', 'ready', 'wire', 'bubble',
