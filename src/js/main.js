@@ -308,7 +308,7 @@ function indexPage() {
     $.ajax({
       type: "POST",
       //url: "http://localhost:8080",
-      url: "https://us-central1-ccx-eng-cam.cloudfunctions.net/alogic-playground",
+      url: "https://europe-west1-alogic-playground.cloudfunctions.net/compile",
       data: JSON.stringify(request),
       datatype: "json",
       contentType: "application/json; charset=utf-8",
